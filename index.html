@@ -1,48 +1,925 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Informe Práctica 3 - Sistemas Operativos</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; padding: 40px; color: #333; }
-        header { border-bottom: 2px solid #0056b3; margin-bottom: 20px; }
-        .code-block { background: #f4f4f4; border-left: 5px solid #0056b3; padding: 15px; font-family: monospace; }
-        .team-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        .team-table th, .team-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        .team-table th { background-color: #f2f2f2; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Práctica 3 — Creación de Procesos | Sistemas Operativos 2026A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --accent:    #1f6feb;
+      --accent2:   #3fb950;
+      --accent3:   #d29922;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --code-bg:   #1c2128;
+      --tag-fork:  #1f6feb22;
+      --tag-exec:  #3fb95022;
+      --tag-sys:   #d2992222;
+      --radius:    8px;
+      --mono:      'IBM Plex Mono', monospace;
+      --sans:      'IBM Plex Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.7; font-size: 15px; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .page-wrap { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+
+    /* Sidebar */
+    .sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; background: var(--surface); border-right: 1px solid var(--border); padding: 28px 20px; display: flex; flex-direction: column; gap: 6px; }
+    .sidebar-logo { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .sidebar-logo span { color: var(--accent); font-weight: 600; }
+    .nav-group-label { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 14px 0 4px 8px; }
+    .nav-link { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; font-size: 13.5px; color: var(--muted); transition: background .15s, color .15s; }
+    .nav-link:hover, .nav-link.active { background: #ffffff0d; color: var(--text); text-decoration: none; }
+    .nav-link .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-fork { background: var(--accent); }
+    .dot-exec { background: var(--accent2); }
+    .dot-sys  { background: var(--accent3); }
+    .dot-gray { background: var(--muted); }
+
+    /* Main */
+    main { max-width: 900px; padding: 48px 52px; margin: 0 auto; }
+
+    /* Hero */
+    .hero { border: 1px solid var(--border); border-radius: var(--radius); padding: 36px 40px; margin-bottom: 40px; background: var(--surface); position: relative; overflow: hidden; }
+    .hero::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, #1f6feb18 0%, transparent 60%); pointer-events: none; }
+    .hero-eyebrow { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 10px; }
+    .hero h1 { font-size: 26px; font-weight: 700; line-height: 1.2; margin-bottom: 6px; }
+    .hero-sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 10px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11.5px; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); background: var(--code-bg); color: var(--muted); }
+    .badge-accent { border-color: #1f6feb55; color: #58a6ff; background: #1f6feb15; }
+
+    /* Sections */
+    .section { margin-bottom: 48px; animation: fadeUp .4s ease both; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .section-number { font-family: var(--mono); font-size: 11px; color: var(--muted); background: var(--code-bg); border: 1px solid var(--border); padding: 2px 8px; border-radius: 4px; }
+    .section h2 { font-size: 18px; font-weight: 600; }
+    .section h3 { font-size: 15px; font-weight: 600; margin: 24px 0 10px; color: #c9d1d9; }
+    .section p { color: #c9d1d9; margin-bottom: 12px; }
+    .section ul { padding-left: 20px; color: #c9d1d9; }
+    .section ul li { margin-bottom: 5px; }
+
+    /* Tags */
+    .exercise-tag { font-family: var(--mono); font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; }
+    .tag-fork { background: var(--tag-fork); color: #58a6ff; border: 1px solid #1f6feb44; }
+    .tag-exec { background: var(--tag-exec); color: #3fb950; border: 1px solid #3fb95044; }
+    .tag-sys  { background: var(--tag-sys);  color: #d29922; border: 1px solid #d2992244; }
+
+    /* Exercise blocks */
+    .exercise-block { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 28px; overflow: hidden; }
+    .exercise-block-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; background: var(--code-bg); border-bottom: 1px solid var(--border); }
+    .exercise-block-header h4 { font-size: 13.5px; font-weight: 600; }
+    .exercise-block-body { padding: 18px 20px; }
+
+    /* Code blocks */
+    .code-wrap { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin: 14px 0; }
+    .code-header { display: flex; align-items: center; justify-content: space-between; background: #21262d; padding: 8px 14px; border-bottom: 1px solid var(--border); }
+    .code-filename { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+    .code-lang { font-family: var(--mono); font-size: 10px; color: var(--accent2); text-transform: uppercase; letter-spacing: .08em; }
+    pre { background: var(--code-bg); padding: 18px; overflow-x: auto; margin: 0; }
+    code { font-family: var(--mono); font-size: 12.5px; line-height: 1.6; }
+    .kw { color: #ff7b72; } .fn { color: #d2a8ff; } .str { color: #a5d6ff; }
+    .cmt { color: #8b949e; font-style: italic; } .num { color: #79c0ff; }
+    .pp { color: #ffa657; } .type { color: #ffa657; }
+
+    /* Terminal */
+    .terminal { border: 1px solid #30363d; border-radius: var(--radius); overflow: hidden; margin: 14px 0; }
+    .terminal-bar { background: #1c2128; padding: 8px 14px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--border); }
+    .terminal-bar span { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .t-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .t-red { background: #ff5f57; } .t-yellow { background: #febc2e; } .t-green { background: #28c840; }
+    .terminal pre { background: #0d1117; padding: 14px 18px; color: #3fb950; }
+    .terminal code { color: #3fb950; font-size: 12px; }
+    .t-muted { color: #8b949e !important; } .t-blue { color: #58a6ff !important; } .t-yellow-t { color: #d29922 !important; }
+
+    /* Callouts */
+    .callout { border-radius: var(--radius); padding: 14px 18px; margin: 14px 0; font-size: 13.5px; border: 1px solid; }
+    .callout-info   { background: #1f6feb12; border-color: #1f6feb40; color: #58a6ff; }
+    .callout-ok     { background: #3fb95012; border-color: #3fb95040; color: #3fb950; }
+    .callout-warn   { background: #d2992212; border-color: #d2992240; color: #d29922; }
+    .callout-title  { font-weight: 700; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+
+    /* Tables */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 14px 0; }
+    .data-table th { background: var(--code-bg); font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 10px 14px; text-align: left; border-bottom: 2px solid var(--border); }
+    .data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: #c9d1d9; }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: #ffffff05; }
+
+    /* Pills */
+    .pill { display: inline-block; font-family: var(--mono); font-size: 11.5px; background: var(--code-bg); border: 1px solid var(--border); padding: 1px 8px; border-radius: 4px; color: #d2a8ff; }
+
+    /* ── CAPTURE FRAMES ────────────────────────────────────────── */
+    .captures-section { margin: 24px 0; }
+    .captures-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: #c9d1d9; padding-bottom: 8px; border-bottom: 1px dashed var(--border); }
+    .capture-grid { display: grid; gap: 20px; }
+    .capture-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+    .capture-grid.cols-1 { grid-template-columns: 1fr; }
+    .capture-frame { border: 1.5px dashed #3d4a5c; border-radius: var(--radius); overflow: hidden; background: #0d1117; }
+    .capture-frame-header { background: #161b22; border-bottom: 1px solid var(--border); padding: 8px 14px; display: flex; align-items: center; gap: 8px; }
+    .capture-frame-header .cam-icon { font-size: 13px; }
+    .capture-frame-label { font-family: var(--mono); font-size: 11px; color: #58a6ff; }
+    .capture-placeholder { min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; color: var(--muted); }
+    .capture-placeholder .ph-icon { font-size: 36px; opacity: .4; }
+    .capture-placeholder p { font-size: 12px; text-align: center; line-height: 1.5; }
+    .capture-placeholder em { font-size: 11px; color: #3d4a5c; font-style: normal; }
+    .capture-caption { background: #161b22; border-top: 1px solid var(--border); padding: 8px 14px; font-size: 11.5px; color: var(--muted); font-family: var(--mono); text-align: center; }
+    .capture-caption strong { color: #58a6ff; }
+    .capture-frame img {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+      border-radius: 6px;
+      width: 100%;
+      display: block;
+    }
+
+    .capture-frame img:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Modal: ventana emergente para ver imagen grande */
+    .img-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.95);
+      z-index: 9999;
+      cursor: zoom-out;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .img-modal img {
+      max-width: 90%;
+      max-height: 90%;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .img-modal.active {
+      display: flex;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* Divider */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+    footer { text-align: center; padding: 32px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); font-family: var(--mono); }
+
+    @media (max-width: 900px) { .page-wrap { grid-template-columns: 1fr; } .sidebar { display: none; } main { padding: 28px 20px; } .capture-grid.cols-2 { grid-template-columns: 1fr; } }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>Informe de Laboratorio: Creación de Procesos</h1>
-        <p><strong>Escuela Politécnica Nacional</strong></p>
-        <p><strong>Grupo F</strong></p>
-    </header>
+<div class="page-wrap">
 
-    <section>
-        <h2>1. Objetivos</h2>
-        <ul>
-            <li>Familiarizar al estudiante con el uso de las funciones fork, system, exec.</li>
-            <li>Realizar actividades de creación de procesos padres e hijos.</li>
-        </ul>
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">EPN &nbsp;·&nbsp; <span>SO-2026A</span></div>
+
+    <span class="nav-group-label">Inicio</span>
+    <a href="#resumen" class="nav-link active"><span class="dot dot-gray"></span> Resumen</a>
+    <a href="#objetivos" class="nav-link"><span class="dot dot-gray"></span> Objetivos</a>
+    <a href="#marco" class="nav-link"><span class="dot dot-gray"></span> Marco Teórico</a>
+    <a href="#equipo" class="nav-link"><span class="dot dot-gray"></span> Equipo</a>
+
+    <span class="nav-group-label">Ejercicios</span>
+    <a href="#fork" class="nav-link"><span class="dot dot-fork"></span> 3.1 Uso de fork()</a>
+    <a href="#fork-311" class="nav-link" style="padding-left:24px;font-size:12.5px;"><span class="dot dot-gray" style="width:5px;height:5px;"></span> 3.1.1 PID / PPID</a>
+    <a href="#fork-312" class="nav-link" style="padding-left:24px;font-size:12.5px;"><span class="dot dot-gray" style="width:5px;height:5px;"></span> 3.1.2 Incremento + archivo</a>
+    <a href="#fork-313" class="nav-link" style="padding-left:24px;font-size:12.5px;"><span class="dot dot-gray" style="width:5px;height:5px;"></span> 3.1.3 Proceso huérfano</a>
+    <a href="#fork-314" class="nav-link" style="padding-left:24px;font-size:12.5px;"><span class="dot dot-gray" style="width:5px;height:5px;"></span> 3.1.4 Tres procesos hijo</a>
+    <a href="#exec" class="nav-link"><span class="dot dot-exec"></span> 3.2 Uso de exec()</a>
+    <a href="#system" class="nav-link"><span class="dot dot-sys"></span> 3.3 Uso de system()</a>
+  </nav>
+
+  <!-- Main -->
+  <main>
+
+    <!-- Hero -->
+    <div class="hero" id="resumen">
+      <p class="hero-eyebrow">Laboratorio de Sistemas Operativos · 2026A</p>
+       <div style="text-align: right;">
+    </div>
+      <h1>Práctica 3: Creación de Procesos</h1>
+      <p class="hero-sub">Escuela Politécnica Nacional — Facultad de Ingeniería en Sistemas</p>
+      <div class="hero-meta">
+      <img src="Ejercicio1_Fork/img1/EPN.png" alt="Logo EPN" style="height: 80px; width: auto;" />
+        <span class="badge"><span class="icon">👩‍🏫</span> Ing. Diana Martínez, PhD.</span>
+        <span class="badge"><span class="icon">👥</span> Grupo F</span>
+        <span class="badge badge-accent">
+          <span class="icon">🔗</span>
+          <a href="https://github.com/mateosebastian236236/Practica3-SistemasOperativos-2026A" target="_blank">Ver repositorio en GitHub</a>
+        </span>
+      </div>
+    </div>
+   
+    <!-- Objetivos -->
+    <section class="section" id="objetivos">
+      <div class="section-header"><span class="section-number">01</span><h2>Objetivos</h2></div>
+      <ul>
+        <li>Familiarizar al estudiante con el uso de las funciones <span class="pill">fork()</span>, <span class="pill">exec()</span> y <span class="pill">system()</span>.</li>
+        <li>Comprender el comportamiento de procesos padre e hijo en Linux.</li>
+        <li>Identificar procesos zombie y huérfanos, y sus implicaciones en el sistema.</li>
+        <li>Realizar actividades prácticas de creación de procesos en lenguaje C.</li>
+      </ul>
     </section>
 
-    <section>
-        <h2>2. Distribución de Tareas - Grupo F</h2>
-        <table class="team-table">
-            <tr><th>Rol / Responsabilidad</th><th>Asignación</th></tr>
-            <tr><td>Integración en GitHub y Documentación Final</td><td>Líder de Grupo</td></tr>
-            <tr><td>Uso de Fork (Figura 1 y 2)</td><td>Integrante 2</td></tr>
-            <tr><td>Procesos Huérfanos y Múltiples Hijos (Figura 3 y 4)</td><td>Integrante 3</td></tr>
-            <tr><td>Uso de Exec (Figura 6)</td><td>Integrante 4</td></tr>
-            <tr><td>Uso de System</td><td>Integrante 5</td></tr>
-        </table>
+    <!-- Marco Teórico -->
+    <section class="section" id="marco">
+      <div class="section-header"><span class="section-number">02</span><h2>Marco Teórico</h2></div>
+      <p>Todo programa en ejecución es un <strong>proceso</strong>. El sistema operativo gestiona todos los procesos y los identifica con un número único llamado <span class="pill">PID</span> (Process ID). Cada proceso (excepto el primero, <code>init</code> / <code>systemd</code>) tiene un padre, cuyo identificador se obtiene con <span class="pill">getppid()</span>.</p>
+      <h3>fork()</h3>
+      <p>Crea un clon exacto del proceso actual. El valor de retorno diferencia padre de hijo:</p>
+      <table class="data-table">
+        <thead><tr><th>Valor retornado</th><th>Significado</th></tr></thead>
+        <tbody>
+          <tr><td><code>-1</code></td><td>Error al crear el proceso</td></tr>
+          <tr><td><code>0</code></td><td>Código ejecutado por el proceso <strong>hijo</strong></td></tr>
+          <tr><td><code>&gt; 0</code></td><td>Código ejecutado por el proceso <strong>padre</strong> (valor = PID del hijo)</td></tr>
+        </tbody>
+      </table>
+      <h3>exec()</h3>
+      <p>Sustituye la imagen de memoria del proceso actual por un nuevo programa. A diferencia de <span class="pill">fork()</span>, no crea un nuevo proceso — reemplaza al actual. Las variantes más usadas son <span class="pill">execl()</span>, <span class="pill">execv()</span> y <span class="pill">execvp()</span>.</p>
+      <h3>system()</h3>
+      <p>Permite ejecutar un comando del shell desde un programa C. Internamente crea un proceso hijo que ejecuta <code>/bin/sh -c comando</code>. Es más sencilla que <span class="pill">exec()</span> pero menos eficiente y segura para producción.</p>
     </section>
 
-    <section>
-        <h2>3. Desarrollo y Resultados</h2>
-        <div id="contenido-integrado">
+    <!-- Equipo -->
+    <section class="section" id="equipo">
+      <div class="section-header"><span class="section-number">03</span><h2>Equipo y Distribución de Tareas</h2></div>
+      <table class="data-table">
+        <thead><tr><th>Integrante</th><th>Responsabilidad</th><th>Etiqueta</th></tr></thead>
+        <tbody>
+          <tr><td>Sebastian Rios (Líder)</td><td>Integración GitHub, documentación general, informe HTML</td><td><span class="badge">Coordinación</span></td></tr>
+          <tr><td>Emily Tituaña</td><td>Ejercicios 3.1.1 y 3.1.2 (Figuras 1 y 2)</td><td><span class="exercise-tag tag-fork">Fork</span></td></tr>
+          <tr><td>Gabriel Quilachamin</td><td>Ejercicios 3.1.3 y 3.1.4 (Figuras 3 y 4)</td><td><span class="exercise-tag tag-fork">Fork</span></td></tr>
+          <tr><td>Daniela Caiza</td><td>Ejercicio 3.2.1 — uso de <code>exec()</code> (Figura 6)</td><td><span class="exercise-tag tag-exec">Exec</span></td></tr>
+          <tr><td>Stefanie Ortega</td><td>Ejercicio 3.3.1 — uso de <code>system()</code></td><td><span class="exercise-tag tag-sys">System</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- ═══════════════════ 3.1 FORK ═══════════════════ -->
+    <section class="section" id="fork">
+      <div class="section-header"><span class="section-number">3.1</span><h2>Uso de <code>fork()</code></h2><span class="exercise-tag tag-fork">Fork</span></div>
+
+      <!-- Imagen introductoria 3.1 -->
+      <div class="capture-frame" style="margin-bottom:28px;">
+        <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Preparación del entorno de trabajo</span></div>
+        <img src="Ejercicio1_Fork/img1/Imagen1.png" alt="Creación de carpetas y archivos de trabajo para la práctica" style="width:100%;display:block;" />
+        <div class="capture-caption"><strong>Figura 0</strong> — Creación de directorios de trabajo, ingreso a la carpeta y creación del archivo del programa</div>
+      </div>
+
+      <!-- 3.1.1 -->
+      <div class="exercise-block" id="fork-311">
+        <div class="exercise-block-header"><h4>3.1.1 — Identificar valores PID y PPID</h4><span class="exercise-tag tag-fork">Fork · Emily Tituaña</span></div>
+        <div class="exercise-block-body">
+          <p>Se ejecuta el código de la Figura 1 para observar cómo <span class="pill">fork()</span> crea un proceso hijo y cómo cada proceso reporta su propio PID y el PID de su padre.</p>
+          <div class="code-wrap">
+            <div class="code-header"><span class="code-filename">Ejercicio1_Fork/codigo1.c</span><span class="code-lang">C</span></div>
+            <pre><code><span class="pp">#include</span> <span class="str">&lt;stdio.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;unistd.h&gt;</span>
+
+<span class="type">int</span> <span class="fn">main</span>()
+{
+    <span class="fn">printf</span>(<span class="str">"Ejemplo de fork.\n"</span>);
+    <span class="fn">printf</span>(<span class="str">"Inicio del proceso padre. PID=%d\n"</span>, <span class="fn">getpid</span>());
+
+    <span class="kw">if</span> (<span class="fn">fork</span>() == <span class="num">0</span>)
+    {
+        <span class="cmt">/* Proceso hijo */</span>
+        <span class="fn">printf</span>(<span class="str">"Inicio proceso hijo. PID=%d, PPID=%d\n"</span>, <span class="fn">getpid</span>(), <span class="fn">getppid</span>());
+        <span class="fn">sleep</span>(<span class="num">1</span>);
+    }
+    <span class="kw">else</span>
+    {
+        <span class="cmt">/* Proceso padre */</span>
+        <span class="fn">printf</span>(<span class="str">"Continuacion del padre. PID=%d\n"</span>, <span class="fn">getpid</span>());
+        <span class="fn">sleep</span>(<span class="num">1</span>);
+    }
+    <span class="fn">printf</span>(<span class="str">"Fin del proceso %d\n"</span>, <span class="fn">getpid</span>());
+    <span class="kw">return</span> <span class="num">0</span>;
+}</code></pre>
+          </div>
+          <h3>Salida del programa</h3>
+          <div class="terminal">
+            <div class="terminal-bar"><span class="t-dot t-red"></span><span class="t-dot t-yellow"></span><span class="t-dot t-green"></span><span>bash — gcc codigo1.c -o programa1 &amp;&amp; ./programa1</span></div>
+            <pre><code>Ejemplo de fork.
+Inicio del proceso padre. <span class="t-blue">PID=1327</span>
+Continuacion del padre.   <span class="t-blue">PID=1327</span>
+Inicio proceso hijo.      <span class="t-blue">PID=1328</span>, <span class="t-yellow-t">PPID=1327</span>
+Fin del proceso <span class="t-blue">1327</span>
+Fin del proceso <span class="t-blue">1328</span></code></pre>
+          </div>
+          <h3>Análisis de PIDs</h3>
+          <table class="data-table">
+            <thead><tr><th>Proceso</th><th>PID</th><th>PPID</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td>Padre</td><td><code>1327</code></td><td>(shell)</td><td>Proceso que ejecuta el programa y llama a <code>fork()</code></td></tr>
+              <tr><td>Hijo</td><td><code>1328</code></td><td><code>1327</code></td><td>Clon creado por <code>fork()</code>; su padre es el proceso 1327</td></tr>
+            </tbody>
+          </table>
+          <div class="callout callout-info"><div class="callout-title">💡 Observación</div>El proceso padre inicia con PID 1327. Al llamar <code>fork()</code>, el SO crea el proceso hijo con PID 1328, cuyo PPID apunta al padre (1327). Ambos terminan de forma independiente.</div>
+
+          <!-- Capturas 3.1.1 -->
+          <div class="captures-section">
+            <h3>📸 Capturas de compilación y ejecución</h3>
+            <div class="capture-grid cols-2">
+              <div class="capture-frame">
+                <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Captura 1 — Compilación</span></div>
+                <img src="Ejercicio1_Fork/img1/Imagen2.png" alt="Compilación de codigo1.c con gcc" style="width:100%;display:block;" />
+                <div class="capture-caption"><strong>Figura 1.1</strong> — Compilación del programa codigo1.c</div>
+              </div>
+              <div class="capture-frame">
+                <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Captura 2 — Ejecución y salida</span></div>
+                <img src="Ejercicio1_Fork/img1/Imagen3.png" alt="Salida en consola con PID y PPID de padre e hijo" style="width:100%;display:block;" />
+                <div class="capture-caption"><strong>Figura 1.2</strong> — Salida mostrando PID del padre e hijo</div>
+              </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3.1.2 -->
+      <div class="exercise-block" id="fork-312">
+        <div class="exercise-block-header"><h4>3.1.2 — Padre incrementa variable; hijo registra en archivo</h4><span class="exercise-tag tag-fork">Fork · Emily Tituaña</span></div>
+        <div class="exercise-block-body">
+          <p>El proceso <strong>padre</strong> incrementa 10 veces una variable en pasos de 10, mientras el proceso <strong>hijo</strong> escribe cada valor en <span class="pill">registro.txt</span>.</p>
+          <div class="callout callout-warn"><div class="callout-title">⚠️ Nota sobre memoria de procesos</div>Tras <code>fork()</code>, padre e hijo tienen <strong>copias independientes</strong> de la variable. El incremento del padre no se refleja directamente en el hijo; el hijo lleva su propio contador.</div>
+          <div class="code-wrap">
+            <div class="code-header"><span class="code-filename">Ejercicio1_Fork/codigo2.c</span><span class="code-lang">C</span></div>
+            <pre><code><span class="pp">#include</span> <span class="str">&lt;stdio.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;stdlib.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;unistd.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;sys/wait.h&gt;</span>
+
+<span class="type">int</span> <span class="fn">main</span>() {
+    <span class="type">int</span> pid = <span class="fn">fork</span>();
+    <span class="type">int</span> variable = <span class="num">0</span>;
+
+    <span class="kw">if</span> (pid == <span class="num">0</span>) {
+        <span class="cmt">/* Proceso hijo: escribe en archivo */</span>
+        FILE *f = <span class="fn">fopen</span>(<span class="str">"registro.txt"</span>, <span class="str">"w"</span>);
+        <span class="kw">if</span> (f == <span class="kw">NULL</span>) <span class="fn">exit</span>(<span class="num">1</span>);
+        <span class="kw">for</span> (<span class="type">int</span> i = <span class="num">1</span>; i &lt;= <span class="num">10</span>; i++) {
+            variable += <span class="num">10</span>;
+            <span class="fn">fprintf</span>(f, <span class="str">"iteracion %d: %d\n"</span>, i, variable);
+            <span class="fn">fflush</span>(f);
+            <span class="fn">printf</span>(<span class="str">"Hijo registra: %d\n"</span>, variable);
+            <span class="fn">sleep</span>(<span class="num">1</span>);
+        }
+        <span class="fn">fclose</span>(f);
+        <span class="fn">exit</span>(<span class="num">0</span>);
+    } <span class="kw">else</span> {
+        <span class="cmt">/* Proceso padre: incrementa e imprime */</span>
+        <span class="kw">for</span> (<span class="type">int</span> i = <span class="num">1</span>; i &lt;= <span class="num">10</span>; i++) {
+            variable += <span class="num">10</span>;
+            <span class="fn">printf</span>(<span class="str">"Padre incrementa: %d\n"</span>, variable);
+            <span class="fn">sleep</span>(<span class="num">1</span>);
+        }
+        <span class="fn">wait</span>(<span class="kw">NULL</span>);
+    }
+    <span class="kw">return</span> <span class="num">0</span>;
+}</code></pre>
+          </div>
+          <div class="callout callout-ok"><div class="callout-title">✅ Resultado</div>El archivo <code>registro.txt</code> contiene las 10 iteraciones (10, 20, … 100). El padre espera al hijo gracias a <code>wait(NULL)</code>, evitando un proceso zombie.</div>
+
+          <!-- Capturas 3.1.2 -->
+          <div class="captures-section">
+            <h3>📸 Capturas de compilación y ejecución</h3>
+            <div class="capture-grid cols-2">
+              <div class="capture-frame">
+                <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Captura 1 — Compilación</span></div>
+                <img src="Ejercicio1_Fork/img1/Imagen4.png" alt="Compilación de codigo2.c con gcc" style="width:100%;display:block;" />
+                <div class="capture-caption"><strong>Figura 2.1</strong> — Compilación del programa codigo2.c</div>
+              </div>
+              <div class="capture-frame">
+                <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Captura 2 — Ejecución en consola</span></div>
+                <img src="Ejercicio1_Fork/img1/Imagen5.png" alt="Salida intercalada padre/hijo en consola" style="width:100%;display:block;" />
+                <div class="capture-caption"><strong>Figura 2.2</strong> — Salida intercalada padre/hijo en consola</div>
+              </div>
+            </div>
+            <div class="capture-grid cols-1" style="margin-top:20px;">
+              <div class="capture-frame">
+                <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Captura 3 — Contenido de registro.txt</span></div>
+                <img src="Ejercicio1_Fork/img1/Imagen6.png" alt="Contenido del archivo registro.txt generado por el proceso hijo" style="width:100%;display:block;" />
+                <div class="capture-caption"><strong>Figura 2.3</strong> — Contenido de registro.txt generado por el proceso hijo</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3.1.3 -->
+      <div class="exercise-block" id="fork-313">
+        <div class="exercise-block-header"><h4>3.1.3 — Proceso hijo sin espera (Proceso Huérfano)</h4><span class="exercise-tag tag-fork">Fork · Gabriel Quilachamin</span></div>
+        <div class="exercise-block-body">
+          <p>Cuando el padre termina antes que el hijo, el hijo queda <strong>huérfano</strong>. El SO lo re-adopta automáticamente bajo <span class="pill">init</span> / <span class="pill">systemd</span> (PID 1).</p>
+
+          <h3>Preguntas del ejercicio</h3>
+          <table class="data-table">
+            <thead><tr><th>Pregunta</th><th>Respuesta</th></tr></thead>
+            <tbody>
+              <tr><td>a) ¿Cuál es el PID del proceso padre e hijo creado?</td><td>Padre: <code>1065</code> · Hijo: <code>1066</code> (varían en cada ejecución)</td></tr>
+              <tr><td>b) ¿A qué proceso corresponde ese ID?</td><td>PID 1065 → proceso padre (original). PID 1066 → proceso hijo creado por <code>fork()</code></td></tr>
+              <tr><td>c) ¿Cómo se denomina este tipo de proceso hijo?</td><td><strong>Proceso huérfano</strong> (<em>orphan process</em>). El hijo alcanzó a capturar el PPID real justo antes de que el SO lo reasignara a <code>init</code></td></tr>
+            </tbody>
+          </table>
+
+          <h3>d) Código modificado para evitar el proceso huérfano</h3>
+          <p>Se agrega <span class="pill">wait(NULL)</span> en el bloque del padre y se retira <code>wait(0)</code> del hijo:</p>
+          <div class="code-wrap">
+            <div class="code-header"><span class="code-filename">Ejercicio1_Fork/codigo3.c — versión modificada</span><span class="code-lang">C</span></div>
+            <pre><code><span class="pp">#include</span> <span class="str">&lt;unistd.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;stdlib.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;stdio.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;sys/wait.h&gt;</span>
+
+<span class="type">int</span> pid;
+
+<span class="type">int</span> <span class="fn">main</span>() {
+    pid = <span class="fn">fork</span>();
+    <span class="kw">switch</span> (pid) {
+        <span class="kw">case</span> <span class="num">-1</span>:
+            <span class="fn">printf</span>(<span class="str">"\nNo he podido crear el proceso hijo"</span>);
+            <span class="kw">break</span>;
+        <span class="kw">case</span> <span class="num">0</span>:
+            <span class="fn">printf</span>(<span class="str">"\nSoy el hijo, mi PID es %d y mi PPID es %d"</span>, <span class="fn">getpid</span>(), <span class="fn">getppid</span>());
+            <span class="cmt">/* Se retira wait(0) del hijo */</span>
+            <span class="kw">break</span>;
+        <span class="kw">default</span>:
+            <span class="fn">printf</span>(<span class="str">"\nSoy el padre, mi PID es %d y el PID de mi hijo es %d"</span>, <span class="fn">getpid</span>(), pid);
+            <span class="fn">wait</span>(<span class="kw">NULL</span>);  <span class="cmt">/* ← esta línea evita el huérfano */</span>
+            <span class="kw">break</span>;
+    }
+    <span class="fn">printf</span>(<span class="str">"\nFinal de ejecución de %d \n"</span>, <span class="fn">getpid</span>());
+    <span class="fn">exit</span>(<span class="num">0</span>);
+}</code></pre>
+          </div>
+          <div class="callout callout-ok"><div class="callout-title">✅ Verificación</div>Con <code>wait(NULL)</code> en el padre, cuando el hijo imprime su PPID, este sigue siendo el PID del padre real (no 1), confirmando que el proceso ya no queda huérfano.</div>
+
+          <!-- Capturas 3.1.3 -->
+          <div class="captures-section">
+            <h3>📸 Capturas de compilación y ejecución</h3>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Captura 1 — Código original: compilación y ejecución (se observa cómo el hijo queda huérfano)</p>
+            <div class="capture-grid cols-2">
+              <div class="capture-frame">
+                <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Compilación — código original</span></div>
+                <img src="Ejercicio1_Fork/img1/Imagen7.png" alt="Compilación del código original del proceso huérfano" style="width:100%;display:block;" />
+                <div class="capture-caption"><strong>Figura 3.1</strong> — Compilación del código original (con huérfano)</div>
+              </div>
+              <div class="capture-frame">
+                <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Ejecución — proceso huérfano</span></div>
+                <img src="Ejercicio1_Fork/img1/Imagen8.png" alt="Ejecución mostrando PPID del hijo cambia a 1 al quedar huérfano" style="width:100%;display:block;" />
+                <div class="capture-caption"><strong>Figura 3.2</strong> — Ejecución: PPID del hijo pasa a 1 (huérfano)</div>
+              </div>
+            </div>
+            <p style="font-size:13px;color:var(--muted);margin:20px 0 12px;">Captura 2 — Código modificado: compilación y ejecución (el hijo ya no queda huérfano)</p>
+            <div class="capture-grid cols-2">
+              <div class="capture-frame">
+                <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Compilación — código modificado</span></div>
+                <img src="Ejercicio1_Fork/img1/Imagen9.png" alt="Compilación del código modificado con wait(NULL) en el padre" style="width:100%;display:block;" />
+                <div class="capture-caption"><strong>Figura 3.3</strong> — Compilación del código modificado (con wait)</div>
+              </div>
+              <div class="capture-frame">
+                <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Ejecución — sin proceso huérfano</span></div>
+                <img src="Ejercicio1_Fork/img1/Imagen10.png" alt="Ejecución mostrando que el PPID del hijo conserva el PID del padre" style="width:100%;display:block;" />
+                <div class="capture-caption"><strong>Figura 3.4</strong> — PPID del hijo = PID del padre (sin huérfano)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3.1.4 -->
+      <div class="exercise-block" id="fork-314">
+        <div class="exercise-block-header"><h4>3.1.4 — Un padre y tres procesos hijo con tareas distintas</h4><span class="exercise-tag tag-fork">Fork · Gabriel Quilachamin</span></div>
+        <div class="exercise-block-body">
+          <p>Modificación de la Figura 4: en lugar de que los tres hijos hagan la misma tarea (contar del 1 al 10), cada uno realiza una operación diferente según su número de proceso.</p>
+          <div class="code-wrap">
+            <div class="code-header"><span class="code-filename">Ejercicio1_Fork/codigo4.c — modificado</span><span class="code-lang">C</span></div>
+            <pre><code><span class="pp">#include</span> <span class="str">&lt;stdio.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;stdlib.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;unistd.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;sys/wait.h&gt;</span>
+
+<span class="pp">#define</span> NUM_PROC <span class="num">3</span>
+
+<span class="type">void</span> <span class="fn">hijoHasAlgo</span>(<span class="type">int</span> numero);
+
+<span class="type">int</span> <span class="fn">main</span>() {
+    <span class="type">int</span> i, pid;
+    <span class="kw">for</span> (i = <span class="num">1</span>; i &lt;= NUM_PROC; i++) {
+        pid = <span class="fn">fork</span>();
+        <span class="kw">switch</span>(pid) {
+            <span class="kw">case</span> <span class="num">-1</span>: <span class="fn">fprintf</span>(stderr, <span class="str">"Error al crear el proceso\n"</span>); <span class="kw">break</span>;
+            <span class="kw">case</span> <span class="num">0</span>:  <span class="fn">hijoHasAlgo</span>(i); <span class="fn">exit</span>(<span class="num">0</span>);
+            <span class="kw">default</span>:
+                <span class="fn">wait</span>(<span class="kw">NULL</span>);
+                <span class="fn">printf</span>(<span class="str">"Mi hijo %d ha terminado.\n"</span>, i);
+                <span class="kw">break</span>;
+        }
+    }
+    <span class="kw">return</span> <span class="num">0</span>;
+}
+
+<span class="type">void</span> <span class="fn">hijoHasAlgo</span>(<span class="type">int</span> numero) {
+    <span class="fn">printf</span>(<span class="str">"\nEjecutando el hijo %d (PID: %d)\n"</span>, numero, <span class="fn">getpid</span>());
+    <span class="kw">if</span> (numero == <span class="num">1</span>) {
+        <span class="fn">printf</span>(<span class="str">"Hijo 1 - Conteo ascendente:\n"</span>);
+        <span class="kw">for</span> (<span class="type">int</span> i=<span class="num">1</span>; i&lt;=<span class="num">10</span>; i++) <span class="fn">printf</span>(<span class="str">"%d\t"</span>, i);
+    } <span class="kw">else if</span> (numero == <span class="num">2</span>) {
+        <span class="fn">printf</span>(<span class="str">"Hijo 2 - Cuadrados:\n"</span>);
+        <span class="kw">for</span> (<span class="type">int</span> i=<span class="num">1</span>; i&lt;=<span class="num">10</span>; i++) <span class="fn">printf</span>(<span class="str">"%d\t"</span>, i*i);
+    } <span class="kw">else if</span> (numero == <span class="num">3</span>) {
+        <span class="fn">printf</span>(<span class="str">"Hijo 3 - Conteo descendente:\n"</span>);
+        <span class="kw">for</span> (<span class="type">int</span> i=<span class="num">10</span>; i&gt;=<span class="num">1</span>; i--) <span class="fn">printf</span>(<span class="str">"%d\t"</span>, i);
+    }
+    <span class="fn">printf</span>(<span class="str">"\n"</span>);
+}</code></pre>
+          </div>
+          <h3>Tareas por hijo</h3>
+          <table class="data-table">
+            <thead><tr><th>Hijo</th><th>Tarea</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td>Hijo 1</td><td>Conteo ascendente (1→10)</td><td>Imprime los números del 1 al 10</td></tr>
+              <tr><td>Hijo 2</td><td>Cuadrados (1²→10²)</td><td>Imprime los cuadrados del 1 al 10</td></tr>
+              <tr><td>Hijo 3</td><td>Conteo descendente (10→1)</td><td>Imprime los números del 10 al 1</td></tr>
+            </tbody>
+          </table>
+          <div class="terminal">
+            <div class="terminal-bar"><span class="t-dot t-red"></span><span class="t-dot t-yellow"></span><span class="t-dot t-green"></span><span>bash — ./programa4</span></div>
+            <pre><code>Ejecutando el hijo 1 (PID: XXXX)
+Hijo 1 - Conteo ascendente:
+1   2   3   4   5   6   7   8   9   10
+Mi hijo 1 ha terminado.
+
+Ejecutando el hijo 2 (PID: XXXX)
+Hijo 2 - Cuadrados:
+1   4   9   16   25   36   49   64   81   100
+Mi hijo 2 ha terminado.
+
+Ejecutando el hijo 3 (PID: XXXX)
+Hijo 3 - Conteo descendente:
+10  9   8   7   6   5   4   3   2   1
+Mi hijo 3 ha terminado.</code></pre>
+          </div>
+
+          <!-- Capturas 3.1.4 -->
+          <div class="captures-section">
+            <h3>📸 Capturas de compilación y ejecución</h3>
+            <div class="capture-grid cols-2">
+              <div class="capture-frame">
+                <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Captura 1 — Compilación (parte 1)</span></div>
+                <img src="Ejercicio1_Fork/img1/Imagen11.png" alt="Compilación del código modificado con tres hijos — parte 1" style="width:100%;display:block;" />
+                <div class="capture-caption"><strong>Figura 4.1</strong> — Compilación del programa (parte 1)</div>
+              </div>
+              <div class="capture-frame">
+                <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Captura 2 — Compilación (parte 2)</span></div>
+                <img src="Ejercicio1_Fork/img1/Imagen12.png" alt="Compilación del código modificado con tres hijos — parte 2" style="width:100%;display:block;" />
+                <div class="capture-caption"><strong>Figura 4.2</strong> — Compilación del programa (parte 2)</div>
+              </div>
+            </div>
+            <div class="capture-grid cols-1" style="margin-top:20px;">
+              <div class="capture-frame">
+                <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Captura 3 — Ejecución con tres tareas distintas</span></div>
+                <img src="Ejercicio1_Fork/img1/Imagen13.png" alt="Ejecución mostrando cada hijo realizando su tarea diferente" style="width:100%;display:block;" />
+                <div class="capture-caption"><strong>Figura 4.3</strong> — Cada hijo ejecuta una tarea distinta: conteo, cuadrados, descendente</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
+
+    <hr class="divider" />
+
+    <!-- ═══════════════════ 3.2 EXEC ═══════════════════ -->
+   <section class="section" id="exec">
+    <div class="section-header">
+        <span class="section-number">3.2</span>
+        <h2>Uso de <code>exec()</code></h2>
+        <span class="exercise-tag tag-exec">Exec</span>
+    </div>
+
+    <div class="exercise-block">
+        <div class="exercise-block-header">
+            <h4>3.2.1 — Sustitución de la imagen de memoria con execl()</h4>
+            <span class="exercise-tag tag-exec">Exec · Daniela Caiza</span>
+        </div>
+
+        <div class="exercise-block-body">
+            <p>En este ejercicio se implementó la llamada al sistema <strong>execl()</strong> de manera directa para sustituir el espacio de direcciones de memoria del proceso hijo con el ejecutable del comando de listado detallado "ls -l".</p>
+
+            <div class="code-wrap">
+                <div class="code-header"><span class="code-filename">Ejercicio2_Exec/ejercicio_exec.c</span><span class="code-lang">C</span></div>
+                <pre><code><span class="pp">#include</span> <span class="str">&lt;stdio.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;stdlib.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;unistd.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;sys/wait.h&gt;</span>
+
+<span class="type">int</span> <span class="fn">main</span>() {
+    <span class="type">char</span> *program = <span class="str">"/bin/ls"</span>;
+    <span class="fn">printf</span>(<span class="str">"Padre (PID %d): Iniciando proceso hijo...\n"</span>, <span class="fn">getpid</span>());
+
+    <span class="type">int</span> pid = <span class="fn">fork</span>();
+
+    <span class="kw">if</span> (pid == -<span class="num">1</span>) {
+        <span class="fn">perror</span>(<span class="str">"Error al crear el proceso"</span>);
+        <span class="fn">exit</span>(<span class="num">1</span>);
+    } <span class="kw">else</span> <span class="kw">if</span> (pid == <span class="num">0</span>) {
+        <span class="fn">printf</span>(<span class="str">"Hijo (PID %d): Ejecutando comando ls...\n"</span>, <span class="fn">getpid</span>());
+        <span class="fn">execl</span>(program, <span class="str">"ls"</span>, <span class="str">"-l"</span>, <span class="kw">NULL</span>);
+        
+        <span class="fn">perror</span>(<span class="str">"Error al ejecutar exec"</span>);
+        <span class="fn">exit</span>(<span class="num">0</span>);
+    } <span class="kw">else</span> {
+        <span class="fn">wait</span>(<span class="num">0</span>);
+        <span class="fn">printf</span>(<span class="str">"Padre: El proceso hijo ha finalizado exitosamente.\n"</span>);
+    }
+    <span class="kw">return</span> <span class="num">0</span>;
+}</code></pre>
+            </div>
+
+            <div class="callout callout-info">
+                <div class="callout-title">💡 Concepto Fundamental</div>
+                <p>A diferencia de <code>fork()</code>, que crea un clon, <code>execl()</code> carga y ejecuta un nuevo archivo binario (especificado mediante su ruta absoluta <code>/bin/ls</code>), reemplazando por completo la imagen de memoria del proceso hijo.</p>
+            </div>
+
+            <h3>🛠️ Funciones del Sistema Utilizadas</h3>
+            <table style="width:100%; border-collapse: collapse; margin: 20px 0;">
+                <thead>
+                    <tr style="background-color: #000000;">
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Función</th>
+                        <th style="padding: 10px; border: 1px solid #ddd; text-align: left;">Descripción Técnica</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #ddd;"><code>fork()</code></td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">Duplica el proceso llamador, creando un nuevo proceso hijo concurrente.</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #ddd;"><code>execl()</code></td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">Sustituye el proceso actual. Requiere una lista de argumentos terminada imperativamente con un puntero NULL.</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #ddd;"><code>wait(0)</code></td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">Suspende al proceso padre hasta que el proceso hijo finalice su tarea y cambie de estado.</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #ddd;"><code>getpid()</code></td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">Devuelve el identificador único de proceso (PID) asignado por el kernel.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="callout callout-warning">
+                <div class="callout-title"> Compilación</div>
+                <p>Se utilizó el compilador <strong>gcc</strong> para transformar el fuente <code>ejercicio_exec.c</code> en el ejecutable <code>ejercicio_exec</code> mediante la opción <code>-o</code>.</p>
+            </div>
+
+            <div class="captures-section">
+                <h3>📸 Evidencia de Ejecución</h3>
+                <div class="capture-grid cols-2">
+                    <div class="capture-frame">
+                        <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">cap1 — Preparación</span></div>
+                        <img src="Ejercicio2_Exec/img2/cap1.png" alt="Edición en nano" style="width:100%;" />
+                        <div class="capture-caption"><strong>Figura 5.1</strong> — Creación de carpeta y edición en nano</div>
+                    </div>
+                    <div class="capture-frame">
+                        <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">cap2 — Compilación</span></div>
+                        <img src="Ejercicio2_Exec/img2/cap2.png" alt="Compilación gcc" style="width:100%;" />
+                        <div class="capture-caption"><strong>Figura 5.2</strong> — Compilación del programa con gcc</div>
+                    </div>
+                </div>
+                
+                <div class="capture-grid cols-1" style="margin-top:20px;">
+                    <div class="capture-frame">
+                        <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">cap3 — Salida del Sistema</span></div>
+                        <img src="Ejercicio2_Exec/img2/cap3.png" alt="Resultado Final" style="width:100%;" />
+                        <div class="capture-caption"><strong>Figura 5.3</strong> — Listado detallado ls -l ejecutado por el hijo</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>📊 Análisis de Resultados</h3>
+            <p>Al ejecutar el programa se obtuvo una salida estructurada en la terminal de la máquina virtual que evidencia el control de los procesos:</p>
+            <ul>
+                <li><strong>Padre (PID 1189):</strong> Inicia su ciclo, obtiene su PID del núcleo y efectúa la bifurcación.</li>
+                <li><strong>Hijo (PID 1190):</strong> El sistema operativo crea exitosamente el proceso clonado asignándole el identificador correlativo inmediato.</li>
+                <li><strong>Mutación de Memoria:</strong> Se despliegan los detalles de permisos y tamaños (total 24...), lo que demuestra la ejecución exitosa de <code>/bin/ls</code> tras la mutación completada por <code>execl()</code>.</li>
+                <li><strong>Finalización:</strong> El proceso padre, tras haber estado en estado de espera controlado (wait), reanuda su ejecución al recibir la señal de terminación del hijo.</li>
+            </ul>
+        </div>
+    </div>
+</section>
+<hr class="divider" />
+
+    <!-- ═══════════════════ 3.3 SYSTEM ═══════════════════ -->
+    <section class="section" id="system">
+      <div class="section-header"><span class="section-number">3.3</span><h2>Uso de <code>system()</code></h2><span class="exercise-tag tag-sys">System</span></div>
+
+      <div class="exercise-block">
+        <div class="exercise-block-header"><h4>3.3.1 — Proceso hijo que lista los procesos del sistema</h4><span class="exercise-tag tag-sys">System · Stefanie Ortega</span></div>
+        <div class="exercise-block-body">
+
+          <h3>¿Qué es system()?</h3>
+          <p><span class="pill">system()</span> es una función de la biblioteca estándar de C (<code>&lt;stdlib.h&gt;</code>) que permite ejecutar un comando de shell directamente desde un programa en C/C++. Sirve para lanzar comandos del sistema, scripts u otros ejecutables sin salir del programa actual.</p>
+          <table class="data-table">
+            <thead><tr><th>Característica</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td>Abstracción</td><td>Función de alto nivel que abstrae el uso de <code>fork</code>, <code>execl</code> y <code>wait</code> manualmente</td></tr>
+              <tr><td>Eficiencia de desarrollo</td><td>Reduce líneas de código, aunque se pierde algo de control sobre el proceso</td></tr>
+              <tr><td>Dependencia del shell</td><td>Siempre depende de que <code>/bin/sh</code> esté disponible</td></tr>
+            </tbody>
+          </table>
+
+          <h3>¿Cómo funciona internamente?</h3>
+          <p><code>system()</code> usa <code>fork()</code> para crear un proceso hijo que ejecuta el comando usando <code>execl()</code>:</p>
+          <div class="code-wrap">
+            <div class="code-header"><span class="code-filename">Equivalencia interna de system()</span><span class="code-lang">C</span></div>
+            <pre><code>execl(<span class="str">"/bin/sh"</span>, <span class="str">"sh"</span>, <span class="str">"-c"</span>, command, (<span class="type">char</span> *) <span class="num">0</span>);</code></pre>
+          </div>
+          <div class="callout callout-warn"><div class="callout-title">⚠️ Advertencia de seguridad</div><code>system()</code> no debe usarse con cadenas provenientes del usuario (riesgo de inyección de comandos). Para producción, se prefiere <code>execvp()</code> con argumentos controlados.</div>
+
+          <h3>Código — <code>codigo6.c</code></h3>
+          <div class="code-wrap">
+            <div class="code-header"><span class="code-filename">Ejercicio3_System/codigo6.c</span><span class="code-lang">C</span></div>
+            <pre><code><span class="pp">#include</span> <span class="str">&lt;stdio.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;stdlib.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;unistd.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;sys/wait.h&gt;</span>
+<span class="pp">#include</span> <span class="str">&lt;sys/types.h&gt;</span>
+
+<span class="type">int</span> <span class="fn">main</span>() {
+    <span class="type">pid_t</span> pid_padre = <span class="fn">getpid</span>();
+    <span class="fn">printf</span>(<span class="str">"--- Iniciando ejecucion del sistema de procesos ---\n"</span>);
+    <span class="fn">printf</span>(<span class="str">"[PRINCIPAL] PID del proceso original: %d\n\n"</span>, pid_padre);
+
+    <span class="type">pid_t</span> pid = <span class="fn">fork</span>();
+
+    <span class="kw">if</span> (pid &lt; <span class="num">0</span>) {
+        <span class="fn">perror</span>(<span class="str">"Error al crear el proceso (fork)"</span>);
+        <span class="fn">exit</span>(EXIT_FAILURE);
+    }
+
+    <span class="kw">if</span> (pid == <span class="num">0</span>) {
+        <span class="cmt">/* ── Proceso HIJO ── */</span>
+        <span class="fn">printf</span>(<span class="str">"[HIJO]  PID: %d\n"</span>, <span class="fn">getpid</span>());
+        <span class="fn">printf</span>(<span class="str">"[HIJO]  PPID: %d\n"</span>, <span class="fn">getppid</span>());
+        <span class="fn">printf</span>(<span class="str">"[HIJO]  Mostrando procesos activos...\n"</span>);
+
+        <span class="cmt">/* ps -f --forest: jerarquía de procesos con detalles técnicos */</span>
+        <span class="fn">system</span>(<span class="str">"ps -f --forest"</span>);
+
+        <span class="cmt">/* sprintf construye el comando dinámico con el PID del padre */</span>
+        <span class="type">char</span> arreglo[<span class="num">100</span>];
+        <span class="fn">sprintf</span>(arreglo, <span class="str">"pstree -p -A %d"</span>, <span class="fn">getppid</span>());
+        <span class="fn">printf</span>(<span class="str">"[HIJO] Generando arbol con pstree:\n"</span>);
+        <span class="fn">system</span>(arreglo);
+
+        <span class="fn">exit</span>(<span class="num">0</span>);
+
+    } <span class="kw">else</span> {
+        <span class="cmt">/* ── Proceso PADRE ── */</span>
+        <span class="fn">printf</span>(<span class="str">"[PADRE] PID: %d\n"</span>, <span class="fn">getpid</span>());
+        <span class="fn">printf</span>(<span class="str">"[PADRE] Hijo creado con PID: %d\n"</span>, pid);
+        <span class="fn">printf</span>(<span class="str">"[PADRE] Esperando al hijo...\n\n"</span>);
+
+        <span class="fn">wait</span>(<span class="kw">NULL</span>);  <span class="cmt">/* prevención de proceso zombie */</span>
+
+        <span class="fn">printf</span>(<span class="str">"\n[PADRE] El hijo termino. Finalizando.\n"</span>);
+    }
+    <span class="kw">return</span> <span class="num">0</span>;
+}</code></pre>
+          </div>
+
+          <h3>Herramientas de monitoreo</h3>
+          <table class="data-table">
+            <thead><tr><th>Herramienta</th><th>Uso</th><th>Ventaja</th></tr></thead>
+            <tbody>
+              <tr><td><code>ps -f --forest</code></td><td>Lista procesos con jerarquía en ramas</td><td>Detalles técnicos: UID, PID, PPID, CPU, hora</td></tr>
+              <tr><td><code>pstree -p -A</code></td><td>Árbol visual con PIDs en ASCII</td><td>Superior para comprensión visual de la jerarquía</td></tr>
+            </tbody>
+          </table>
+
+          <div class="callout callout-info"><div class="callout-title">💡 Buffer dinámico con sprintf</div><code>system()</code> solo acepta un único argumento <code>const char *</code>. Por eso se usa <code>sprintf</code> para construir el comando con el PID de forma dinámica, permitiendo que el programa monitoree su propio árbol sin importar qué PID asigne el sistema en cada ejecución.</div>
+
+      <!-- ═══════════════════ CAPTURAS CORREGIDAS ═══════════════════ -->
+     <div class="captures-section">
+    <div class="capture-grid cols-2">
+        <div class="capture-frame">
+            <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Captura 2 — Salida ps -f --forest</span></div>
+            <img src="Ejercicio3_System/img3/image1.png" alt="Salida del comando ps -f --forest ejecutado por el hijo" style="width:100%;display:block;" />
+            <div class="capture-caption"><strong>Figura 6.2</strong> — Procesos del sistema usando ps -f --forest</div>
+        </div>
+        
+        <div class="capture-frame">
+            <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Captura 3 — Árbol pstree</span></div>
+            <img src="Ejercicio3_System/img3/image2.png" alt="Árbol visual generado por pstree -p -A" style="width:100%;display:block;" />
+            <div class="capture-caption"><strong>Figura 6.3</strong> — Árbol de procesos usando pstree</div>
+        </div>
+    </div>
+
+    <div class="capture-grid cols-2" style="margin-top:20px;">
+        <div class="capture-frame">
+            <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Captura 4 — Lógica interna de system()</span></div>
+            <img src="Ejercicio3_System/img3/image3.png" alt="Diagrama explicando cómo system() llama internamente a /bin/sh" style="width:100%;display:block;" />
+            <div class="capture-caption"><strong>Figura 6.4</strong> — Lógica interna de system()</div>
+        </div>
+        
+        <div class="capture-frame">
+            <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Captura 5 — Buffer dinámico con sprintf</span></div>
+            <img src="Ejercicio3_System/img3/image4.png" alt="Uso del buffer y sprintf para construir el comando pstree dinámico" style="width:100%;display:block;" />
+            <div class="capture-caption"><strong>Figura 6.5</strong> — Implementación de buffers dinámicos con sprintf</div>
+        </div>
+    </div>
+
+    <div class="capture-grid cols-2" style="margin-top:20px;">
+        <div class="capture-frame">
+            <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Captura 6 — Genealogía padre–hijo</span></div>
+            <img src="Ejercicio3_System/img3/image5.png" alt="Genealogía de procesos con PIDs verificados" style="width:100%;display:block;" />
+            <div class="capture-caption"><strong>Figura 6.6</strong> — Genealogía de procesos: hijo, padre, abuelos</div>
+        </div>
+    </div>
+    
+    <div class="capture-grid cols-1" style="margin-top:20px;">
+        <div class="capture-frame">
+            <div class="capture-frame-header"><span class="cam-icon">📷</span><span class="capture-frame-label">Captura 7 — Salida completa del programa</span></div>
+            <img src="Ejercicio3_System/img3/image6.png" alt="Salida completa del programa mostrando PID y PPID del padre e hijo" style="width:100%;display:block;" />
+            <div class="capture-caption"><strong>Figura 6.7</strong> — Salida del programa con los identificadores PID y PPID</div>
+        </div>
+    </div>
+</div>
+
+      <!-- Referencias -->
+      <h3>Referencias</h3>
+      <p style="font-size:13px;">[1] DataFlair Team, "Process in Linux - Linux Process Management Tutorial," <em>DataFlair</em>. Disponible en: <a href="https://data-flair.training/blogs/process-in-linux/" target="_blank">https://data-flair.training/blogs/process-in-linux/</a> [Accedido: 10-may-2026].</p>
+      <p style="font-size:13px;">[2] "system(3) — Linux manual page," <em>man7.org</em>, marzo de 2024. Disponible en: <a href="https://man7.org/linux/man-pages/man3/system.3.html" target="_blank">https://man7.org/linux/man-pages/man3/system.3.html</a></p>
+
+    </div>
+  </div>
+</section>
+
+    <hr class="divider" />
+    <footer>Práctica 3 · Sistemas Operativos 2026A · Escuela Politécnica Nacional · Grupo F</footer>
+
+  </main>
+</div>
+<div id="imageModal" class="img-modal">
+    <img id="modalImage" src="" alt="Vista ampliada">
+</div>
+
+<script>
+    // Seleccionar todas las imágenes dentro de .capture-frame
+    const images = document.querySelectorAll('.capture-frame img');
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImage');
+
+    // Agregar evento de clic a cada imagen
+    images.forEach(img => {
+        img.addEventListener('click', function() {
+            modal.classList.add('active');
+            modalImg.src = this.src;
+            modalImg.alt = this.alt;
+        });
+    }); 
+
+    // Cerrar modal al hacer clic en cualquier parte
+    modal.addEventListener('click', function() {
+        modal.classList.remove('active');
+    });
+
+    // Cerrar modal con tecla ESC
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.classList.contains('active')) {
+            modal.classList.remove('active');
+        }
+    });
+</script>
+
 </body>
 </html>
